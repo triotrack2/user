@@ -1,0 +1,159 @@
+<script type="module">
+        // 1. IMPORTS (Browser-compatible CDN links)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, getDocs, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+        // 2. YOUR SPECIFIC FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyDcWwo0m2eS1ndyC06U1G_JF1J7Y1WNlfQ",
+            authDomain: "triotrack-66dd6.firebaseapp.com",
+            projectId: "triotrack-66dd6",
+            storageBucket: "triotrack-66dd6.firebasestorage.app",
+            messagingSenderId: "994389952848",
+            appId: "1:994389952848:web:659fbc330f2d660dfb0455",
+            measurementId: "G-B7TMFX0F21"
+        };
+
+        // 3. INITIALIZE FIREBASE
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const analytics = getAnalytics(app);
+
+        // --- APP LOGIC BELOW ---
+
+        let map, busMarker;
+        let busRoutesDB = []; 
+        let unsubscribeLive = null; 
+
+        // 1. DATA FETCH
+        async function fetchRoutes() {
+            const statusEl = document.getElementById('db-status');
+            try {
+                // Try to get routes from your database
+                // const querySnapshot = await getDocs(collection(db, "routes")); 
+                // busRoutesDB = []; querySnapshot.forEach((doc) => busRoutesDB.push(doc.data()));
+                
+                // Fallback data for testing immediately
+                busRoutesDB = [
+                    { id: "p1", type: "Private", stops: ["Palakkad", "Ottapalam", "Guruvayur"], buses: [{ id: "KL-55-A", start: "07:00", type: "Fast" }] }
+                ];
+                statusEl.innerText = "● Cloud Connected"; 
+                statusEl.className = "text-center mt-4 text-xs font-bold text-green-600";
+            } catch (error) {
+                console.error("Connection Error:", error);
+                statusEl.innerText = "⚠ Offline Mode"; 
+                statusEl.className = "text-center mt-4 text-xs font-bold text-red-500";
+            }
+        }
+        fetchRoutes();
+
+        // 2. MAP LOGIC (LEAFLET)
+        window.initMap = (busId) => {
+            if (!map) {
+                map = L.map('map', { zoomControl: false }).setView([10.7867, 76.6548], 12);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                const busIcon = L.divIcon({
+                    className: 'custom-map-marker',
+                    html: `<div class="bus-marker-icon">🚌</div>`,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
+
+                busMarker = L.marker([10.7867, 76.6548], { icon: busIcon }).addTo(map);
+            }
+
+            const docRef = doc(db, "live_locations", busId);
+            
+            if (unsubscribeLive) unsubscribeLive(); 
+
+            // LISTEN TO YOUR DATABASE
+            unsubscribeLive = onSnapshot(docRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    const newLatLng = [data.lat, data.lng];
+                    
+                    busMarker.setLatLng(newLatLng);
+                    map.flyTo(newLatLng, 15); 
+                    
+                    document.getElementById('map-bus-id').innerText = `Bus ${busId} • ${data.speed ? Math.round(data.speed * 3.6) + ' km/h' : 'Moving'}`;
+                }
+            });
+
+            setTimeout(() => { map.invalidateSize(); }, 200);
+        };
+
+        // 3. UI NAVIGATION & HELPERS
+        window.navigateTo = (viewId) => {
+            document.querySelectorAll('.view').forEach(v => { v.classList.add('hidden'); v.classList.remove('active-view'); });
+            const target = document.getElementById('view-' + viewId);
+            if(target) {
+                target.classList.remove('hidden');
+                setTimeout(() => target.classList.add('active-view'), 10);
+            }
+            if (viewId === 'live-map') {
+                window.initMap('KL-55-A'); 
+            } else if (unsubscribeLive) {
+                unsubscribeLive();
+            }
+        };
+
+        window.updateDateTime = () => {
+            const now = new Date();
+            let h = now.getHours(), m = now.getMinutes().toString().padStart(2, '0');
+            document.getElementById('live-time').innerText = `${h%12||12}:${m} ${h>=12?'PM':'AM'}`;
+            document.getElementById('live-date').innerText = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+        }; 
+        setInterval(window.updateDateTime, 1000); 
+        window.updateDateTime();
+
+        window.adminLogin = async () => {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                alert("Login Successful!");
+            } catch (error) {
+                alert("Login Failed: " + error.message);
+            }
+        };
+
+        window.selectCategory = (cat) => { document.getElementById('search-header').innerText = `Find ${cat} Route`; window.navigateTo('search'); };
+        
+        window.swapLocations = () => {
+            const f = document.getElementById('input-from');
+            const t = document.getElementById('input-to');
+            const btn = document.querySelector('.swap-btn');
+            btn.classList.add('rotate-click');
+            setTimeout(() => btn.classList.remove('rotate-click'), 400);
+            [f.value, t.value] = [t.value, f.value];
+        };
+
+        window.showBusResults = () => {
+            const list = document.getElementById('results-list'); list.innerHTML = '';
+            // Using dummy data for demo, typically you'd filter busRoutesDB here
+            busRoutesDB[0].buses.forEach(bus => {
+                const div = document.createElement('div');
+                div.className = "bg-white p-5 rounded-2xl shadow-md border cursor-pointer";
+                div.innerHTML = `<div class="flex justify-between"><h3 class="font-bold text-xl text-primary">${bus.id}</h3><span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded">LIVE</span></div>`;
+                div.onclick = () => window.navigateTo('live-map');
+                list.appendChild(div);
+            });
+            document.getElementById('result-count').innerText = "1 Found";
+            window.navigateTo('results');
+        };
+
+        window.shareTrip = () => {
+            if (navigator.share) {
+                navigator.share({ title: 'Triotrack', url: window.location.href }).catch(console.error);
+            } else {
+                alert("Link copied!");
+            }
+        };
+    </script>
