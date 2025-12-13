@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - Secure</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Full Screen Overlay for Login */
+        #login-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #212529; z-index: 9999; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+        .nav-link { cursor: pointer; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div id="login-overlay">
+    <div class="card p-4 text-center shadow" style="width: 320px;">
+        <h4 class="mb-3">Admin Login</h4>
+        
+        <div id="system-status" class="alert alert-info p-1 small mb-3">
+            Connecting...
+        </div>
+
+        <input type="password" id="adminPass" class="form-control mb-3" placeholder="Enter Password">
+        <button id="loginBtn" class="btn btn-primary w-100" disabled>Login</button>
+        <p class="text-danger mt-2 small" id="loginMsg"></p>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>Admin Dashboard</h2>
+        <button id="logoutBtn" class="btn btn-outline-danger btn-sm">Logout</button>
+    </div>
+    <hr>
+    
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" id="tab-route">Add Bus Route</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tab-driver">Create Driver Account</a>
+        </li>
+    </ul>
+
+    <div id="route-section">
+        <div class="card p-4 shadow-sm">
+            <h5>Add New Bus Route</h5>
+            <form id="routeForm">
+                <div class="row mb-3">
+                    <div class="col"><input type="text" id="busName" class="form-control" placeholder="Bus Name" required></div>
+                    <div class="col"><input type="text" id="busNumber" class="form-control" placeholder="Bus Number" required></div>
+                </div>
+                <div class="mb-3">
+                    <select id="category" class="form-select">
+                        <option>Public Bus (KSRTC)</option>
+                        <option>Private Bus</option>
+                    </select>
+                </div>
+                
+                <h6>Stops</h6>
+                <div id="stops-container">
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Start</span>
+                        <input type="text" id="startPoint" class="form-control" placeholder="Start Location" required>
+                        <input type="time" id="startTime" class="form-control" required>
+                    </div>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Via</span>
+                        <input type="text" class="form-control stop-loc" placeholder="Intermediate Stop">
+                        <input type="time" class="form-control stop-time">
+                    </div>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">Via</span>
+                        <input type="text" class="form-control stop-loc" placeholder="Intermediate Stop">
+                        <input type="time" class="form-control stop-time">
+                    </div>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">End</span>
+                        <input type="text" id="endPoint" class="form-control" placeholder="Destination" required>
+                        <input type="time" id="endTime" class="form-control" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-dark w-100 mt-2">Save Route</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="driver-section" class="d-none">
+        <div class="card p-4 border-warning shadow-sm">
+            <h5>Create Driver Login</h5>
+            <form id="driverForm">
+                <div class="mb-3">
+                    <label>Bus Number (Username)</label>
+                    <input type="text" id="driverBusID" class="form-control" placeholder="e.g. KL-01" required>
+                </div>
+                <div class="mb-3">
+                    <label>Set Password</label>
+                    <input type="text" id="driverPass" class="form-control" placeholder="e.g. 1234" required>
+                </div>
+                <button type="submit" class="btn btn-warning w-100">Create Account</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDcWwo0m2eS1ndyC06U1G_JF1J7Y1WNlfQ",
+      authDomain: "triotrack-66dd6.firebaseapp.com",
+      projectId: "triotrack-66dd6",
+      storageBucket: "triotrack-66dd6.firebasestorage.app",
+      messagingSenderId: "994389952848",
+      appId: "1:994389952848:web:659fbc330f2d660dfb0455",
+      measurementId: "G-B7TMFX0F21"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Enable Login Button when ready
+    document.getElementById('system-status').innerText = "System Ready";
+    document.getElementById('system-status').classList.replace('alert-info', 'alert-success');
+    document.getElementById('loginBtn').disabled = false;
+
+    // --- 1. ADMIN LOGIN CHECK ---
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+        const inputPass = document.getElementById('adminPass').value.trim();
+        const msg = document.getElementById('loginMsg');
+        const btn = document.getElementById('loginBtn');
+
+        if (!inputPass) return;
+
+        btn.innerText = "Verifying...";
+        btn.disabled = true;
+
+        try {
+            // Fetch Master Password from Firestore
+            const docRef = doc(db, "credentials", "admin_master");
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                if (inputPass === docSnap.data().password) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                } else {
+                    msg.innerText = "❌ Incorrect Password";
+                    btn.innerText = "Login";
+                    btn.disabled = false;
+                }
+            } else {
+                alert("Error: 'admin_master' document not found in Database.\nPlease create it in Firebase Console first.");
+                msg.innerText = "Config Error: admin_master missing";
+                btn.innerText = "Login";
+                btn.disabled = false;
+            }
+        } catch (error) {
+            console.error(error);
+            msg.innerText = "Connection Error";
+            btn.innerText = "Login";
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        location.reload();
+    });
+
+    // --- 2. TABS ---
+    document.getElementById('tab-route').addEventListener('click', () => {
+        document.getElementById('route-section').classList.remove('d-none');
+        document.getElementById('driver-section').classList.add('d-none');
+        document.getElementById('tab-route').classList.add('active');
+        document.getElementById('tab-driver').classList.remove('active');
+    });
+
+    document.getElementById('tab-driver').addEventListener('click', () => {
+        document.getElementById('route-section').classList.add('d-none');
+        document.getElementById('driver-section').classList.remove('d-none');
+        document.getElementById('tab-route').classList.remove('active');
+        document.getElementById('tab-driver').classList.add('active');
+    });
+
+    // --- 3. CREATE DRIVER ---
+    document.getElementById('driverForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const busID = document.getElementById('driverBusID').value.toUpperCase().trim();
+        const pass = document.getElementById('driverPass').value.trim();
+        
+        try {
+            await setDoc(doc(db, "credentials", busID), { password: pass });
+            alert("Driver Account Created!");
+            e.target.reset();
+        } catch (error) { alert("Error: " + error.message); }
+    });
+
+    // --- 4. SAVE ROUTE ---
+    document.getElementById('routeForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        let stops = [];
+        
+        stops.push({ name: document.getElementById('startPoint').value, time: document.getElementById('startTime').value });
+        
+        document.querySelectorAll('#stops-container .input-group').forEach(div => {
+            if(div.querySelector('.stop-loc')) {
+                const loc = div.querySelector('.stop-loc').value;
+                const time = div.querySelector('.stop-time').value;
+                if(loc && loc.trim() !== "") stops.push({ name: loc, time: time || "N/A" });
+            }
+        });
+        
+        stops.push({ name: document.getElementById('endPoint').value, time: document.getElementById('endTime').value });
+
+        const busData = {
+            busName: document.getElementById('busName').value,
+            busNumber: document.getElementById('busNumber').value.toUpperCase(),
+            category: document.getElementById('category').value,
+            route: stops,
+            searchKeywords: stops.map(s => s.name.toLowerCase().trim())
+        };
+
+        try {
+            await addDoc(collection(db, "routes"), busData);
+            alert("Route Saved Successfully!");
+            e.target.reset();
+        } catch (err) { alert("Error saving route: " + err.message); }
+    });
+</script>
+</body>
+</html>
