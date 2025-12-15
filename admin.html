@@ -63,6 +63,13 @@
         .dark-mode .navbar {
             background-color: #000 !important;
         }
+        .dark-mode .table {
+            color: #fff;
+        }
+        .dark-mode .table-hover tbody tr:hover {
+            color: #fff;
+            background-color: #333;
+        }
 
         /* ANIMATED TITLE */
         .brand-animate {
@@ -155,14 +162,17 @@
         <!-- TABS -->
         <ul class="nav nav-tabs nav-justified mb-4" id="adminTabs">
             <li class="nav-item">
-                <a class="nav-link active text-danger" id="tab-route"><i class="fas fa-route me-2"></i>Add Bus Route</a>
+                <a class="nav-link active text-danger" id="tab-route"><i class="fas fa-route me-2"></i>Add Route</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link text-secondary" id="tab-driver"><i class="fas fa-id-card me-2"></i>Create Driver</a>
+                <a class="nav-link text-secondary" id="tab-fleet"><i class="fas fa-bus me-2"></i>Manage Fleet</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-secondary" id="tab-driver"><i class="fas fa-id-card me-2"></i>Drivers</a>
             </li>
         </ul>
 
-        <!-- ROUTE SECTION -->
+        <!-- ROUTE SECTION (ADD) -->
         <div id="route-section">
             <div class="card p-4 shadow-sm border-0 border-start border-5 border-danger">
                 <h5 class="fw-bold mb-3">Add New Bus Route</h5>
@@ -181,7 +191,7 @@
                         <label class="small text-muted">Service Category</label>
                         <select id="category" class="form-select">
                             <option value="Private Bus">Private Bus</option>
-                            <option value="Public Bus (KSRTC)">Public Bus (KSRTC)</option> <!-- Aligned with User App values -->
+                            <option value="Public Bus (KSRTC)">Public Bus (KSRTC)</option> 
                             <option value="Interstate">Interstate Bus</option>
                             <option value="Institution">Institution Bus</option>
                         </select>
@@ -226,7 +236,35 @@
             </div>
         </div>
 
-        <!-- DRIVER SECTION -->
+        <!-- FLEET SECTION (VIEW) -->
+        <div id="fleet-section" class="d-none">
+            <div class="card shadow-sm border-0 border-start border-5 border-info">
+                <div class="card-header bg-white border-0">
+                    <h5 class="fw-bold mb-0 pt-2">Active Fleet & Routes</h5>
+                    <p class="text-muted small mb-0">Live view of all buses in the system.</p>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Bus No.</th>
+                                    <th>Name</th>
+                                    <th>Category</th>
+                                    <th>Route</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleet-list-body">
+                                <tr><td colspan="5" class="text-center p-3 text-muted">Loading fleet data...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DRIVER SECTION (CREATE) -->
         <div id="driver-section" class="d-none">
             <div class="card p-4 shadow-sm border-0 border-start border-5 border-warning">
                 <h5 class="fw-bold mb-3">Create Driver Credentials</h5>
@@ -261,7 +299,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, setDoc, doc, getDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     // --- 1. FIREBASE CONFIG ---
     const firebaseConfig = {
@@ -355,32 +393,72 @@
         location.reload();
     });
 
-    // --- 4. TAB LOGIC ---
-    document.getElementById('tab-route').addEventListener('click', function() {
-        document.getElementById('route-section').classList.remove('d-none');
-        document.getElementById('driver-section').classList.add('d-none');
+    // --- 4. TAB LOGIC (UPDATED FOR 3 TABS) ---
+    function switchTab(tabId, sectionId) {
+        // Hide all
+        ['route-section', 'fleet-section', 'driver-section'].forEach(id => document.getElementById(id).classList.add('d-none'));
+        // Deactivate all
+        ['tab-route', 'tab-fleet', 'tab-driver'].forEach(id => {
+            const el = document.getElementById(id);
+            el.classList.remove('active', 'text-danger');
+            el.classList.add('text-secondary');
+        });
+
+        // Show selected
+        document.getElementById(sectionId).classList.remove('d-none');
+        const activeTab = document.getElementById(tabId);
+        activeTab.classList.add('active', 'text-danger');
+        activeTab.classList.remove('text-secondary');
+    }
+
+    document.getElementById('tab-route').addEventListener('click', () => switchTab('tab-route', 'route-section'));
+    document.getElementById('tab-fleet').addEventListener('click', () => switchTab('tab-fleet', 'fleet-section'));
+    document.getElementById('tab-driver').addEventListener('click', () => switchTab('tab-driver', 'driver-section'));
+
+    // --- 5. FLEET VIEW LOGIC (NEW) ---
+    // Listen for realtime updates to show bus details
+    onSnapshot(collection(db, "routes"), (snapshot) => {
+        const tbody = document.getElementById('fleet-list-body');
         
-        this.classList.add('active', 'text-danger');
-        this.classList.remove('text-secondary');
-        
-        const driverTab = document.getElementById('tab-driver');
-        driverTab.classList.remove('active', 'text-danger');
-        driverTab.classList.add('text-secondary');
+        if (snapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted">No routes added yet.</td></tr>';
+            return;
+        }
+
+        let html = "";
+        snapshot.forEach(docSnap => {
+            const bus = docSnap.data();
+            const route = bus.route || [];
+            const start = route.length > 0 ? route[0].name : "N/A";
+            const end = route.length > 0 ? route[route.length-1].name : "N/A";
+            
+            html += `
+                <tr>
+                    <td class="fw-bold">${bus.busNumber}</td>
+                    <td>${bus.busName}</td>
+                    <td><span class="badge bg-secondary">${bus.category}</span></td>
+                    <td><small class="text-muted">${start} <i class="fas fa-arrow-right mx-1"></i> ${end}</small></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-danger" onclick="window.deleteRoute('${docSnap.id}')" title="Delete Route">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
     });
 
-    document.getElementById('tab-driver').addEventListener('click', function() {
-        document.getElementById('route-section').classList.add('d-none');
-        document.getElementById('driver-section').classList.remove('d-none');
-        
-        this.classList.add('active', 'text-danger');
-        this.classList.remove('text-secondary');
-        
-        const routeTab = document.getElementById('tab-route');
-        routeTab.classList.remove('active', 'text-danger');
-        routeTab.classList.add('text-secondary');
-    });
+    // Expose delete function
+    window.deleteRoute = async (id) => {
+        if(confirm("Are you sure you want to permanently delete this route?")) {
+            try {
+                await deleteDoc(doc(db, "routes", id));
+            } catch(e) { alert("Error deleting: " + e.message); }
+        }
+    };
 
-    // --- 5. CREATE DRIVER (PRESERVED) ---
+    // --- 6. CREATE DRIVER (PRESERVED) ---
     document.getElementById('driverForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const busID = document.getElementById('driverBusID').value.toUpperCase().trim();
@@ -405,7 +483,7 @@
         }
     });
 
-    // --- 6. SAVE ROUTE (PRESERVED) ---
+    // --- 7. SAVE ROUTE (PRESERVED) ---
     document.getElementById('routeForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -451,7 +529,7 @@
 
         try {
             await addDoc(collection(db, "routes"), busData);
-            alert("✅ Route Saved Successfully!");
+            alert("✅ Route Saved Successfully! Check the 'Manage Fleet' tab to view.");
             e.target.reset();
         } catch (err) { 
             alert("Error saving route: " + err.message); 
