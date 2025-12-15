@@ -1,666 +1,772 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>TrioTrack - Find, Route, Track</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Triotrack - Find, Route, Track</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Leaflet CSS for Map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
-        /* =========================================
-           1. CORE VARIABLES & RESET (Teal Professional Theme)
-           ========================================= */
-        :root {
-            --primary: #0d9488;       /* Teal-600 */
-            --primary-light: #ccfbf1; /* Teal-50 */
-            --secondary: #0f766e;     /* Teal-700 */
-            --accent: #f59e0b;        /* Amber-500 */
-            
-            --bg-light: #f8fafc;      /* Slate-50 */
-            --text-light: #334155;    /* Slate-700 */
-            --card-light: #ffffff;
-            
-            --bg-dark: #0f172a;       /* Slate-900 */
-            --text-dark: #f1f5f9;     /* Slate-100 */
-            --card-dark: #1e293b;     /* Slate-800 */
-
-            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --radius: 1.5rem;
-            --transition: all 0.3s ease;
+        /* GLOBAL FONT SETTING */
+        body, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, select {
+            font-family: "Times New Roman", Times, serif !important;
         }
 
-        html.dark {
-            --bg-current: var(--bg-dark);
-            --text-current: var(--text-dark);
-            --card-current: var(--card-dark);
-            --border-current: #334155;
+        /* PAGE TRANSITIONS */
+        .page-section {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+            padding-bottom: 80px;
         }
-        html.light {
-            --bg-current: var(--bg-light);
-            --text-current: var(--text-light);
-            --card-current: var(--card-light);
-            --border-current: #e2e8f0;
+        .page-section.active {
+            display: block;
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-current);
-            color: var(--text-current);
-            transition: var(--transition);
-            overflow-x: hidden;
-            height: 100vh;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* =========================================
-           2. UTILITY CLASSES
-           ========================================= */
-        .hidden { display: none !important; }
-        .flex { display: flex; }
-        .flex-col { flex-direction: column; }
-        .items-center { align-items: center; }
-        .justify-between { justify-content: space-between; }
-        .justify-center { justify-content: center; }
-        .gap-2 { gap: 0.5rem; }
-        .gap-4 { gap: 1rem; }
-        .gap-6 { gap: 1.5rem; }
-        
-        .w-full { width: 100%; }
-        .h-full { height: 100%; }
-        .fixed { position: fixed; }
-        .absolute { position: absolute; }
-        .relative { position: relative; }
-        .top-0 { top: 0; }
-        .left-0 { left: 0; }
-        .right-0 { right: 0; }
-        .bottom-0 { bottom: 0; }
-        .z-50 { z-index: 50; }
-        .z-40 { z-index: 40; }
-
-        .p-4 { padding: 1rem; }
-        .p-6 { padding: 1.5rem; }
-        .mt-4 { margin-top: 1rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mb-6 { margin-bottom: 1.5rem; }
-        .mb-8 { margin-bottom: 2rem; }
-        
-        .text-center { text-align: center; }
-        .text-justify { text-align: justify; }
-        .font-bold { font-weight: 700; }
-        .text-xl { font-size: 1.25rem; }
-        .text-2xl { font-size: 1.5rem; }
-        .text-4xl { font-size: 2.5rem; }
-        
-        .rounded-xl { border-radius: 0.75rem; }
-        .rounded-full { border-radius: 9999px; }
-        .shadow-lg { box-shadow: var(--shadow); }
-
-        .bg-white { background-color: var(--card-current); }
-        .bg-primary { background-color: var(--primary); }
-        .text-primary { color: var(--primary); }
-        .text-white { color: #ffffff; }
-        .border { border: 1px solid var(--border-current); }
-
-        /* Grid */
-        .grid { display: grid; }
-        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-        /* Container */
-        .max-w-md { max-width: 28rem; margin: 0 auto; height: 100%; position: relative; }
-        .content-area { padding-top: 5rem; padding-bottom: 2rem; padding-left: 1rem; padding-right: 1rem; }
-
-        /* Buttons & Inputs */
-        button { cursor: pointer; border: none; transition: transform 0.1s; }
-        button:active { transform: scale(0.98); }
-        input { width: 100%; background: transparent; border: none; outline: none; color: var(--text-current); font-size: 1rem; }
-
-        /* Animations */
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(180deg); } }
-        
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
-        .rotate-click { animation: rotate 0.4s ease-in-out; }
-
-        /* --- SPECIFIC COMPONENTS --- */
-        
-        /* 1. Nav & Dropdown */
-        .nav-glass {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+        /* DARK MODE STYLES */
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #ffffff !important;
         }
-        html.dark .nav-glass { background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-        .theme-dropdown {
-            position: absolute; top: 110%; right: 0;
-            background: var(--card-current); border: 1px solid var(--border-current);
-            border-radius: 0.75rem; overflow: hidden;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-            width: 100px; z-index: 100;
+        .dark-mode .card, .dark-mode .modal-content {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border-color: #333;
         }
-        .theme-option { padding: 0.5rem 1rem; font-size: 0.9rem; cursor: pointer; }
-        .theme-option:hover { background: rgba(0,0,0,0.05); }
-        html.dark .theme-option:hover { background: rgba(255,255,255,0.1); }
-
-        /* 2. Admin Modal */
-        .modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-            display: flex; align-items: center; justify-content: center; z-index: 100;
+        .dark-mode .form-control, .dark-mode .form-select {
+            background-color: #2d2d2d;
+            color: #fff;
+            border-color: #444;
         }
-        .modal-box {
-            background: var(--card-current); padding: 2rem; border-radius: 1.5rem;
-            width: 90%; max-width: 320px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        .dark-mode .text-muted {
+            color: #aaa !important;
+        }
+        .dark-mode .list-group-item {
+            background-color: #1e1e1e;
+            color: #fff;
+            border-color: #333;
+        }
+        .dark-mode .navbar {
+            background-color: #000 !important;
+        }
+        /* Modal dark mode specific */
+        .dark-mode .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
         }
 
-        /* 3. Date Time Display */
-        .datetime-display {
-            font-size: 0.85rem; font-weight: 600; color: var(--text-current); opacity: 0.8;
-            margin-top: 0.5rem; letter-spacing: 0.5px;
+        /* ANIMATED TITLE */
+        .brand-animate {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #0d6efd, #198754, #ffc107);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine {
+            to { background-position: 200% center; }
         }
 
-        /* 4. Selection Cards */
-        .card-simple {
-            background: var(--card-current); border: 1px solid var(--border-current);
-            border-radius: 1rem; height: 100px; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); font-weight: 700; font-size: 1.1rem;
+        /* CARDS & LAYOUT */
+        .section-card {
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            border-top: 4px solid #0d6efd;
         }
-        .card-simple:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); }
-
-        /* 5. Input Groups */
-        .input-group {
-            display: flex; align-items: center; background: rgba(0,0,0,0.03);
-            border: 1px solid var(--border-current); border-radius: 0.75rem; padding: 0.8rem;
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
-        html.dark .input-group { background: rgba(255,255,255,0.05); }
+        .bus-result-card {
+            cursor: pointer;
+            border-left: 5px solid #198754;
+            transition: 0.2s;
+        }
+        .bus-result-card:hover {
+            background-color: rgba(25, 135, 84, 0.1);
+        }
 
-        /* 6. Map Styles */
-        #map { height: 100%; width: 100%; border-radius: 1.5rem; z-index: 1; }
-        .custom-map-marker { font-size: 2rem; text-align: center; }
+        /* MAP STYLING */
+        #map-container { 
+            display: none; 
+            height: 400px; 
+            margin-top: 20px; 
+            border-radius: 10px; 
+            border: 2px solid #198754; 
+            position: relative; 
+        }
+        #map { height: 100%; width: 100%; border-radius: 8px; }
 
-        /* 7. Swap Button Centering (Updated Size) */
-        .swap-btn-wrapper {
+        /* UTILS */
+        .time-display {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .timeline {
+            border-left: 2px solid #0d6efd;
+            padding-left: 20px;
+            margin-left: 10px;
+        }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .timeline-item::before {
+            content: '';
             position: absolute;
-            top: 50%;
-            right: 1.5rem;
-            transform: translateY(-50%);
-            z-index: 20;
+            left: -26px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            background: #0d6efd;
+            border-radius: 50%;
         }
-        .swap-btn {
-            width: 40px; height: 40px; /* MEDIUM SIZE */
-            background: var(--card-light); 
-            border: 1px solid var(--border-current);
-            border-radius: 12px; 
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            color: var(--primary);
-            transition: all 0.2s ease;
-        }
-        .swap-btn svg { width: 20px; height: 20px; }
-        html.dark .swap-btn { background: var(--card-dark); }
-        .swap-btn:hover { 
-            background: var(--primary); 
-            color: white; 
-            box-shadow: 0 4px 12px rgba(13, 148, 136, 0.4); 
-        }
-
     </style>
 </head>
-<body class="light" onclick="closeThemeMenu(event)">
+<body class="bg-light">
 
-    <!-- ADMIN PASSWORD MODAL (Password Only) -->
-    <div id="admin-modal" class="modal-overlay hidden">
-        <div class="modal-box animate-slide-up">
-            <h3 class="text-2xl font-bold mb-4 text-center">Admin Access</h3>
-            <div class="input-group mb-6">
-                <input type="password" id="admin-password" placeholder="Enter Password">
+<!-- NAVBAR (Fixed Top) -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow fixed-top">
+    <div class="container-fluid">
+        <!-- Date & Time (Left) -->
+        <div class="text-white d-none d-md-block">
+            <small id="date-display"></small> | <small id="time-display"></small>
+        </div>
+        
+        <span class="navbar-brand fw-bold ms-md-3 mx-auto">🚍 TrioTrack</span>
+
+        <!-- Right Side Controls -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- Theme Toggle -->
+            <div class="dropdown">
+                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-adjust"></i> Theme
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#" onclick="setTheme('light')">Light Mode</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setTheme('dark')">Dark Mode</a></li>
+                </ul>
             </div>
-            <div class="flex gap-2">
-                <button onclick="toggleAdminModal()" class="w-full py-3 rounded-xl border font-bold text-gray-500">Cancel</button>
-                <button onclick="adminLogin()" class="w-full py-3 rounded-xl bg-primary text-white font-bold">Login</button>
+            <!-- Admin Login Button (Triggers Modal) -->
+            <button class="btn btn-warning btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#adminLoginModal">
+                <i class="fas fa-user-shield"></i> Admin
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div style="margin-top: 80px;"></div> <!-- Spacer for fixed navbar -->
+
+<div class="container">
+
+    <!-- PAGE 1: WELCOME PAGE -->
+    <div id="page-welcome" class="page-section active text-center mt-5">
+        <div class="p-4">
+            <h1 class="brand-animate mb-0">TRIOTRACK</h1>
+            <p class="text-muted fw-bold letter-spacing-2" style="letter-spacing: 3px;">FIND • ROUTE • TRACK</p>
+            
+            <div class="mt-4 mb-4">
+                <img src="https://cdn-icons-png.flaticon.com/512/3448/3448339.png" alt="Bus Icon" width="150" class="mb-3">
+                <div class="card p-3 shadow-sm mx-auto" style="max-width: 600px;">
+                    <h5>About TrioTrack</h5>
+                    <p class="small text-muted mb-0">
+                        TrioTrack is your ultimate companion for modern public transportation. 
+                        We connect you to Private, Interstate, and Transport buses with real-time tracking, 
+                        accurate route planning, and seamless user experience. Reliable, Fast, and Easy.
+                    </p>
+                </div>
+            </div>
+
+            <button onclick="navigateTo('page-sections')" class="btn btn-primary btn-lg px-5 shadow rounded-pill">
+                Get Started <i class="fas fa-arrow-right ms-2"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Time Display (visible only on small screens) -->
+        <div class="mt-3 d-md-none text-muted">
+            <small id="date-display-mobile"></small> <br> <span id="time-display-mobile"></span>
+        </div>
+    </div>
+
+    <!-- PAGE 2: SECTIONS PAGE -->
+    <div id="page-sections" class="page-section">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Select Service Type</h2>
+            <p class="text-muted">Choose the type of transportation you need</p>
+        </div>
+
+        <div class="row g-4">
+            <!-- Private -->
+            <div class="col-md-6">
+                <div class="card section-card p-4 text-center" onclick="selectSection('Private Bus')">
+                    <i class="fas fa-bus-alt fa-3x text-primary mb-3"></i>
+                    <h4>PRIVATE</h4>
+                    <p class="text-muted small">Connections between major cities and rural areas of districts.</p>
+                </div>
+            </div>
+            <!-- Transport -->
+            <div class="col-md-6">
+                <div class="card section-card p-4 text-center" onclick="selectSection('Public Bus (KSRTC)')">
+                    <i class="fas fa-landmark fa-3x text-success mb-3"></i>
+                    <h4>TRANSPORT</h4>
+                    <p class="text-muted small">Connections between district to district (KSRTC/Public).</p>
+                </div>
+            </div>
+            <!-- Interstate -->
+            <div class="col-md-6">
+                <div class="card section-card p-4 text-center" onclick="selectSection('Interstate')">
+                    <i class="fas fa-map-marked-alt fa-3x text-danger mb-3"></i>
+                    <h4>INTERSTATE</h4>
+                    <p class="text-muted small">Long-distance connections between state to state.</p>
+                </div>
+            </div>
+            <!-- Institution -->
+            <div class="col-md-6">
+                <div class="card section-card p-4 text-center" style="border-top-color: #6c757d;" onclick="showMaintenance()">
+                    <i class="fas fa-university fa-3x text-secondary mb-3"></i>
+                    <h4>INSTITUTION</h4>
+                    <p class="text-muted small">Connection between campuses to main city/district.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+             <button onclick="navigateTo('page-welcome')" class="btn btn-outline-secondary btn-sm">Back</button>
+        </div>
+    </div>
+
+    <!-- PAGE 3: ROUTE FINDER PAGE -->
+    <div id="page-route" class="page-section">
+        <div class="card p-4 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Search Route <span id="selected-category-badge" class="badge bg-info ms-2">All</span></h5>
+                <button onclick="navigateTo('page-sections')" class="btn btn-sm btn-outline-secondary">Back</button>
+            </div>
+            
+            <!-- Hidden Input for Logic -->
+            <input type="hidden" id="categoryFilter" value="All">
+
+            <div class="row g-2 align-items-center">
+                <div class="col-md-5">
+                    <label class="small text-muted">From</label>
+                    <input type="text" id="source" class="form-control" placeholder="Source (e.g. Stop A)" list="stopOptions">
+                </div>
+                
+                <div class="col-md-2 text-center pt-3">
+                    <button class="btn btn-outline-primary rounded-circle" onclick="swapLocations()" title="Swap">
+                        <i class="fas fa-exchange-alt"></i>
+                    </button>
+                </div>
+
+                <div class="col-md-5">
+                    <label class="small text-muted">To</label>
+                    <input type="text" id="destination" class="form-control" placeholder="Destination (e.g. Stop B)" list="stopOptions">
+                </div>
+            </div>
+            
+            <button id="searchBtn" class="btn btn-dark w-100 mt-3 fw-bold">FIND BUS</button>
+            
+            <datalist id="stopOptions">
+                <!-- Populated by JS -->
+            </datalist>
+        </div>
+
+        <div id="results" class="mt-4">
+            <!-- Bus List Results Go Here -->
+            <div class="text-center text-muted mt-5">
+                <i class="fas fa-search fa-2x mb-2"></i>
+                <p>Enter locations to find buses.</p>
             </div>
         </div>
     </div>
 
-    <!-- NAVIGATION BAR -->
-    <nav class="fixed top-0 w-full z-50 nav-glass shadow-sm transition-all" style="height: 60px;">
-        <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center h-full">
-            <!-- Logo -->
-            <div class="flex items-center gap-2" onclick="navigateTo('welcome')" style="cursor: pointer;">
-                <span class="font-black text-xl tracking-tight text-primary">TRIO<span style="color:var(--text-current)">TRACK</span></span>
+    <!-- PAGE 4: BUS DETAILS PAGE -->
+    <div id="page-details" class="page-section">
+        <button onclick="navigateTo('page-route')" class="btn btn-outline-secondary btn-sm mb-3">
+            <i class="fas fa-arrow-left"></i> Back to Results
+        </button>
+
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="fw-bold mb-0" id="detail-bus-name">Bus Name</h3>
+                <small id="detail-bus-number">KA-00-0000</small>
             </div>
-            
-            <!-- Controls (Theme + Admin) -->
-            <div class="flex items-center gap-6 relative">
-                <!-- Theme Dropdown -->
-                <button id="theme-btn" onclick="toggleThemeMenu(event)" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <span style="font-size:1.2rem;">◑</span>
-                </button>
-                <div id="theme-menu" class="hidden theme-dropdown">
-                    <div class="theme-option" onclick="setTheme('light')">☀ Light</div>
-                    <div class="theme-option" onclick="setTheme('dark')">☾ Dark</div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Basic Info -->
+                    <div class="col-md-6">
+                        <h5 class="text-decoration-underline">Trip Details</h5>
+                        <p class="mb-1"><strong>Start:</strong> <span id="detail-start"></span></p>
+                        <p class="mb-1"><strong>End:</strong> <span id="detail-end"></span></p>
+                        <p class="mb-1"><strong>Total Stops:</strong> <span id="detail-stops-count"></span></p>
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                        <button class="btn btn-success btn-lg mb-2 w-100 w-md-auto" id="btn-live-track">
+                            <i class="fas fa-map-marker-alt"></i> Live Track
+                        </button>
+                        <br>
+                        <button class="btn btn-info text-white mb-2 w-100 w-md-auto" onclick="shareBusDetails()">
+                            <i class="fas fa-share-alt"></i> Share
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Admin Button -->
-                <button onclick="toggleAdminModal()" class="text-xs font-bold text-gray-500 border border-gray-300 dark:border-gray-700 rounded-full px-3 py-1 hover:text-primary transition-colors">
-                     Admin
-                </button>
+                <hr>
+                
+                <!-- Route Timeline -->
+                <h5>Route Schedule</h5>
+                <div id="detail-route-list" class="timeline mt-3">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- MAP CONTAINER (Initially Hidden) -->
+                <div id="map-container">
+                    <div class="d-flex justify-content-between p-2 bg-white border-bottom">
+                        <h6 class="text-success fw-bold m-0" id="map-title">Live Tracking</h6>
+                        <button id="closeMapBtn" class="btn btn-sm btn-danger py-0">Close</button>
+                    </div>
+                    <div id="map"></div>
+                    <p class="text-center small text-muted mt-1 m-0 bg-white">Map updates automatically.</p>
+                </div>
             </div>
         </div>
-    </nav>
+    </div>
 
-    <!-- APP CONTENT -->
-    <main class="max-w-md mx-auto min-h-screen relative">
+    <!-- PAGE 5: ADMIN DASHBOARD (Protected) -->
+    <div id="page-admin" class="page-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold text-danger"><i class="fas fa-user-shield"></i> Admin Dashboard</h2>
+            <button onclick="navigateTo('page-welcome')" class="btn btn-outline-secondary btn-sm">Logout</button>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card bg-primary text-white p-3 shadow-sm">
+                    <h3>Total Buses</h3>
+                    <p class="h1 fw-bold" id="admin-bus-count">0</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-success text-white p-3 shadow-sm">
+                    <h3>Active Routes</h3>
+                    <p class="h1 fw-bold" id="admin-route-count">0</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-warning text-dark p-3 shadow-sm">
+                    <h3>System Status</h3>
+                    <p class="h4 fw-bold mt-2">Online</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Manage Fleet</h5>
+                <button class="btn btn-light btn-sm" onclick="alert('Add Feature coming soon')">+ Add Bus</button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Bus Number</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-bus-list">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div> <!-- End Container -->
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="modal fade" id="adminLoginModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title fw-bold text-dark"><i class="fas fa-lock"></i> Admin Access</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">Restricted area. Please enter your credentials.</p>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Password</label>
+            <input type="password" id="adminPasswordInput" class="form-control" placeholder="Enter password...">
+        </div>
+        <div id="loginError" class="text-danger small d-none">Incorrect Password!</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary fw-bold" onclick="checkAdminPassword()">Login</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="text-center mt-5 mb-4 text-muted small">
+    <hr>
+    <p>© 2024 TrioTrack</p>
+</footer>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // --- 1. FIREBASE CONFIG (UNCHANGED LOGIC) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDcWwo0m2eS1ndyC06U1G_JF1J7Y1WNlfQ",
+      authDomain: "triotrack-66dd6.firebaseapp.com",
+      projectId: "triotrack-66dd6",
+      storageBucket: "triotrack-66dd6.firebasestorage.app",
+      messagingSenderId: "994389952848",
+      appId: "1:994389952848:web:659fbc330f2d660dfb0455",
+      measurementId: "G-B7TMFX0F21"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // --- VARIABLES ---
+    let map = null;
+    let marker = null;
+    let unsubscribe = null;
+    let allRoutesData = []; // Store data locally
+    let currentBusForDetails = null; // Store currently viewed bus
+    let adminModalInstance = null; // For handling modal programmatically
+
+    // --- 2. UI UTILITIES (Navigation, Time, Theme) ---
+
+    // Time & Date
+    function updateTime() {
+        const now = new Date();
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateString = now.toLocaleDateString(undefined, dateOptions);
+
+        // Desktop
+        document.getElementById('date-display').innerText = dateString;
+        document.getElementById('time-display').innerText = timeString;
         
-        <!-- VIEW 1: WELCOME -->
-        <section id="view-welcome" class="view active-view flex flex-col h-full content-area">
-            <div class="text-center mt-8">
-                <h1 class="text-4xl font-black text-primary mb-2">TRIOTRACK</h1>
-                <p class="text-sm font-bold uppercase tracking-widest" style="color: var(--text-current); opacity: 0.7;">Find · Route · Track</p>
-                
-                <!-- Date Time Display -->
-                <div class="datetime-display" id="live-datetime">
-                    12:00 PM | MONDAY, JAN 01
-                </div>
-            </div>
+        // Mobile
+        const dateMobile = document.getElementById('date-display-mobile');
+        const timeMobile = document.getElementById('time-display-mobile');
+        if(dateMobile) dateMobile.innerText = dateString;
+        if(timeMobile) timeMobile.innerText = timeString;
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
 
-            <!-- Creative 3D Bus SVG -->
-            <div class="flex justify-center my-10">
-                <svg width="220" height="180" viewBox="0 0 300 220" fill="none">
-                     <!-- 3D Shadow -->
-                     <ellipse cx="150" cy="200" rx="100" ry="10" fill="black" opacity="0.1"/>
-                     <!-- Bus Body -->
-                     <path d="M40 60 L260 60 L260 160 L40 160 Z" fill="#0d9488" stroke="#115e59" stroke-width="2"/>
-                     <path d="M40 60 L60 40 L280 40 L260 60" fill="#14b8a6" stroke="#115e59" stroke-width="2"/>
-                     <path d="M260 60 L280 40 L280 140 L260 160" fill="#0f766e" stroke="#115e59" stroke-width="2"/>
-                     <!-- Windows -->
-                     <rect x="50" y="75" width="200" height="45" fill="#e2e8f0"/>
-                     <rect x="60" y="80" width="50" height="35" fill="#38bdf8" opacity="0.5"/>
-                     <rect x="120" y="80" width="50" height="35" fill="#38bdf8" opacity="0.5"/>
-                     <rect x="180" y="80" width="50" height="35" fill="#38bdf8" opacity="0.5"/>
-                     <!-- Wheels -->
-                     <circle cx="80" cy="160" r="20" fill="#334155"/>
-                     <circle cx="220" cy="160" r="20" fill="#334155"/>
-                     <circle cx="80" cy="160" r="8" fill="#94a3b8"/>
-                     <circle cx="220" cy="160" r="8" fill="#94a3b8"/>
-                </svg>
-            </div>
-
-            <div class="bg-white p-6 rounded-2xl shadow-lg border mb-8">
-                <!-- Text Justified as requested -->
-                <p class="text-sm text-gray-500 leading-relaxed text-justify">
-                    Triotrack is a smart and modern online bus platform designed to make public transport simple, fast, and reliable for everyone. Our system is built around three core functions — <strong>Find, Route, Track</strong> — giving users everything they need to travel with confidence.
-                </p>
-            </div>
-
-            <!-- Bigger Separated Get Started Button -->
-            <button onclick="selectCategory('')" class="w-full bg-primary text-white font-bold text-xl py-5 rounded-xl shadow-lg mt-auto mb-8 hover:opacity-90 transform active:scale-95 transition-all">
-                Get Started
-            </button>
-        </section>
-
-        <!-- VIEW 2: SELECTION -->
-        <section id="view-selection" class="view hidden flex flex-col h-full content-area">
-            <button onclick="navigateTo('welcome')" class="mb-6 text-sm font-bold text-gray-500 flex items-center gap-2">
-                &larr; Back
-            </button>
-            <h2 class="text-2xl font-bold mb-6 text-primary">Select Service</h2>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div onclick="selectCategory('Private')" class="card-simple">Private</div>
-                <div onclick="selectCategory('Transport')" class="card-simple">Transport</div>
-                <div onclick="selectCategory('Interstate')" class="card-simple">Interstate</div>
-                <div onclick="navigateTo('institution')" class="card-simple">Institution</div>
-            </div>
-        </section>
-
-        <!-- VIEW 3: SEARCH -->
-        <section id="view-search" class="view hidden flex flex-col h-full content-area">
-            <button onclick="navigateTo('selection')" class="mb-6 text-sm font-bold text-gray-500 flex items-center gap-2">
-                &larr; Back
-            </button>
-            <h2 class="text-2xl font-bold mb-6" id="search-header">Find Route</h2>
-
-            <div class="bg-white p-5 rounded-2xl shadow-lg border relative">
-                
-                <!-- From Input -->
-                <div class="mb-6">
-                    <label class="text-xs font-bold uppercase text-gray-500 mb-1 block">From</label>
-                    <div class="input-group">
-                        <input type="text" id="input-from" list="locations" placeholder="Starting Point">
-                    </div>
-                </div>
-
-                <!-- Swap Button (Rectangular Medium Size) -->
-                <div class="swap-btn-wrapper">
-                    <button onclick="swapLocations()" class="swap-btn">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
-                    </button>
-                </div>
-
-                <!-- To Input -->
-                <div class="mb-8">
-                    <label class="text-xs font-bold uppercase text-gray-500 mb-1 block">To</label>
-                    <div class="input-group">
-                        <input type="text" id="input-to" list="locations" placeholder="Destination">
-                    </div>
-                </div>
-
-                <button onclick="showBusResults()" class="w-full bg-primary text-white font-bold text-lg py-4 rounded-xl shadow-md mt-4">Search Buses</button>
-            </div>
-
-            <!-- Recent Searches -->
-            <div class="mt-8">
-                <h3 class="text-xs font-bold text-gray-500 uppercase mb-4">Recent</h3>
-                <div onclick="fillSearch('Palakkad', 'Guruvayur')" class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-colors">
-                    <span>Palakkad &rarr; Guruvayur</span>
-                    <span class="text-gray-400">&rsaquo;</span>
-                </div>
-                <div onclick="fillSearch('Ottapalam', 'Thrissur')" class="bg-white p-4 rounded-xl border shadow-sm flex justify-between items-center text-sm font-bold mt-2 cursor-pointer hover:bg-gray-50 transition-colors">
-                    <span>Ottapalam &rarr; Thrissur</span>
-                    <span class="text-gray-400">&rsaquo;</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- VIEW 4: RESULTS -->
-        <section id="view-results" class="view hidden flex flex-col h-full content-area">
-            <button onclick="navigateTo('search')" class="mb-4 text-sm font-bold text-gray-500 flex items-center gap-2">
-                &larr; Back
-            </button>
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-primary">Buses</h2>
-                <span id="result-count" class="text-xs bg-primary text-white px-2 py-1 rounded">0 Found</span>
-            </div>
-            <div id="results-list" class="flex flex-col gap-4">
-                <!-- Results injected here -->
-            </div>
-        </section>
-
-        <!-- VIEW 6: LIVE MAP -->
-        <section id="view-live-map" class="view hidden h-full relative">
-            <!-- Map Container -->
-            <div id="map" class="w-full h-full bg-gray-200"></div>
-            
-            <!-- Top Bar Over Map -->
-            <div class="absolute top-4 left-4 right-4 z-[400] flex justify-between">
-                <button onclick="navigateTo('results')" class="bg-white px-4 py-2 rounded-full shadow-lg font-bold text-sm text-gray-800">
-                    &larr; Back
-                </button>
-                <div class="bg-white px-4 py-2 rounded-full shadow-lg font-bold text-sm text-green-600 flex items-center gap-2">
-                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> LIVE
-                </div>
-            </div>
-
-            <!-- Bottom Sheet -->
-            <div class="absolute bottom-0 left-0 w-full bg-white p-6 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-[400]">
-                <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4"></div>
-                <h2 id="map-bus-id" class="text-xl font-bold mb-1">Loading...</h2>
-                <p class="text-sm text-gray-500 mb-4">Towards Destination</p>
-                <div class="flex gap-4">
-                    <button onclick="shareTrip()" class="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-gray-700">Share</button>
-                    <button onclick="navigateTo('results')" class="flex-1 bg-red-50 text-red-500 py-3 rounded-xl font-bold">Exit</button>
-                </div>
-            </div>
-        </section>
-        
-        <!-- INSTITUTION & TIMELINE VIEWS are implied in the logic block below for brevity but follow the same structure -->
-        <section id="view-institution" class="view hidden flex flex-col h-full content-area">
-             <button onclick="navigateTo('selection')" class="mb-6 text-sm font-bold text-gray-500">&larr; Back</button>
-             <h2 class="text-2xl font-bold mb-4">Colleges</h2>
-             <div class="bg-white p-6 rounded-xl border text-center">Institution Logic Placeholder</div>
-        </section>
-
-    </main>
-
-    <!-- FIREBASE LOGIC SCRIPT (User Provided) + UI Logic -->
-    <script type="module">
-        // 1. IMPORTS (Browser-compatible CDN links)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
-
-        // 2. YOUR SPECIFIC FIREBASE CONFIGURATION
-        const firebaseConfig = {
-            apiKey: "AIzaSyDcWwo0m2eS1ndyC06U1G_JF1J7Y1WNlfQ",
-            authDomain: "triotrack-66dd6.firebaseapp.com",
-            projectId: "triotrack-66dd6",
-            storageBucket: "triotrack-66dd6.firebasestorage.app",
-            messagingSenderId: "994389952848",
-            appId: "1:994389952848:web:659fbc330f2d660dfb0455",
-            measurementId: "G-B7TMFX0F21"
-        };
-
-        // 3. INITIALIZE FIREBASE
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        // Analytics might fail in some sandbox environments, optional check
-        try { const analytics = getAnalytics(app); } catch(e) {}
-
-        // --- APP LOGIC BELOW ---
-
-        let map, busMarker;
-        let busRoutesDB = []; 
-        let unsubscribeLive = null; 
-
-        // 1. DATA FETCH
-        async function fetchRoutes() {
-            try {
-                // Simulating database fetch for now as per instructions to not break logic but allow demo
-                // const querySnapshot = await getDocs(collection(db, "routes")); 
-                // busRoutesDB = []; querySnapshot.forEach((doc) => busRoutesDB.push(doc.data()));
-                
-                // Fallback data for testing immediately
-                busRoutesDB = [
-                    { id: "p1", type: "Private", stops: ["Palakkad", "Ottapalam", "Guruvayur"], buses: [{ id: "KL-55-A", start: "07:00", type: "Fast" }] }
-                ];
-            } catch (error) {
-                console.error("Connection Error:", error);
-            }
+    // Theme Toggle
+    window.setTheme = (mode) => {
+        if (mode === 'dark') {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
         }
-        fetchRoutes();
+    };
 
-        // 2. MAP LOGIC (LEAFLET)
-        window.initMap = (busId) => {
-            if (!map) {
-                map = L.map('map', { zoomControl: false }).setView([10.7867, 76.6548], 12);
-                
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap'
-                }).addTo(map);
+    // Page Navigation
+    window.navigateTo = (pageId) => {
+        document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+        window.scrollTo(0, 0);
+    };
 
-                const busIcon = L.divIcon({
-                    className: 'custom-map-marker',
-                    html: `<div style="font-size:30px;">🚌</div>`,
-                    iconSize: [40, 40],
-                    iconAnchor: [20, 20]
-                });
+    // Maintenance Alert
+    window.showMaintenance = () => {
+        alert("Maintenance: Institution module is coming soon!");
+    };
 
-                busMarker = L.marker([10.7867, 76.6548], { icon: busIcon }).addTo(map);
-            }
-
-            const docRef = doc(db, "live_locations", busId);
-            
-            if (unsubscribeLive) unsubscribeLive(); 
-
-            // LISTEN TO YOUR DATABASE
-            unsubscribeLive = onSnapshot(docRef, (doc) => {
-                if (doc.exists()) {
-                    const data = doc.data();
-                    const newLatLng = [data.lat, data.lng];
-                    
-                    busMarker.setLatLng(newLatLng);
-                    map.flyTo(newLatLng, 15); 
-                    
-                    document.getElementById('map-bus-id').innerText = `${busId} • ${data.speed ? Math.round(data.speed * 3.6) + ' km/h' : 'Moving'}`;
-                } else {
-                     // Simulate movement if no DB data
-                     document.getElementById('map-bus-id').innerText = `${busId}`;
-                }
-            });
-
-            setTimeout(() => { map.invalidateSize(); }, 200);
-        };
-
-        // 3. UI NAVIGATION & HELPERS
-        window.navigateTo = (viewId) => {
-            document.querySelectorAll('.view').forEach(v => { v.classList.add('hidden'); v.classList.remove('active-view'); });
-            const target = document.getElementById('view-' + viewId);
-            if(target) {
-                target.classList.remove('hidden');
-                setTimeout(() => target.classList.add('active-view'), 10);
-            }
-            if (viewId === 'live-map') {
-                window.initMap('KL-55-A'); 
-            } else if (unsubscribeLive) {
-                // unsubscribeLive(); // Optional: stop listening when leaving map
-            }
-            window.scrollTo(0,0);
-        };
-
-        window.updateDateTime = () => {
-            const now = new Date();
-            let h = now.getHours(), m = now.getMinutes().toString().padStart(2, '0');
-            const dayName = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-            const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
-            document.getElementById('live-datetime').innerText = `${h%12||12}:${m} ${h>=12?'PM':'AM'} | ${dayName}, ${dateStr}`;
-        }; 
-        setInterval(window.updateDateTime, 1000); 
-        window.updateDateTime();
-
-        // ADMIN LOGIC (Updated to Password Only)
-        window.toggleAdminModal = () => {
-            document.getElementById('admin-modal').classList.toggle('hidden');
-        };
-
-        window.adminLogin = async () => {
-            // Only checking password field as requested
-            const password = document.getElementById('admin-password').value;
-            if(!password) { alert("Please enter password"); return; }
-            
-            // Note: In a real app with Firebase Auth, you typically need an identifier (email) too.
-            // Since you asked for password only in UI, we might need a hardcoded email or just pretend for UI demo.
-            // For now, I'm keeping the original logic structure but it might fail without email if using standard firebase auth.
-            // Assuming this is for UI demo mainly or you have a specific setup.
-            try {
-                // Simulating login for UI demo
-                if(password === "admin123") { // Example check
-                     alert("Login Successful! (Demo)");
-                     window.toggleAdminModal();
-                } else {
-                     alert("Incorrect Password (Demo: admin123)");
-                }
-            } catch (error) {
-                alert("Login Failed: " + error.message);
-            }
-        };
-
-        // UI HELPERS
-        window.selectCategory = (cat) => { 
-            if(cat) {
-                 document.getElementById('search-header').innerText = `Find ${cat} Route`; 
-                 window.navigateTo('search'); 
-            } else {
-                window.navigateTo('selection');
-            }
-        };
+    // Section Selection -> Route Page
+    window.selectSection = (category) => {
+        const filterEl = document.getElementById('categoryFilter');
+        const badgeEl = document.getElementById('selected-category-badge');
         
-        window.toggleThemeMenu = (e) => {
-            e.stopPropagation();
-            document.getElementById('theme-menu').classList.toggle('hidden');
-        };
+        if(category === 'Interstate') {
+             filterEl.value = 'All'; 
+             badgeEl.innerText = "Interstate (All)";
+        } else {
+            filterEl.value = category;
+            badgeEl.innerText = category;
+        }
 
-        window.setTheme = (theme) => {
-            const html = document.documentElement;
-            html.className = theme;
-            document.getElementById('theme-menu').classList.add('hidden');
-        };
+        navigateTo('page-route');
+    };
 
-        window.closeThemeMenu = (e) => {
-             const menu = document.getElementById('theme-menu');
-             const btn = document.getElementById('theme-btn');
-             if (!menu.classList.contains('hidden') && !btn.contains(e.target)) {
-                 menu.classList.add('hidden');
-             }
-        };
+    // Swap Locations
+    window.swapLocations = () => {
+        const src = document.getElementById('source');
+        const dst = document.getElementById('destination');
+        const temp = src.value;
+        src.value = dst.value;
+        dst.value = temp;
+    };
 
-        window.swapLocations = () => {
-            const f = document.getElementById('input-from');
-            const t = document.getElementById('input-to');
-            const btn = document.querySelector('.swap-btn');
-            btn.classList.add('rotate-click');
-            setTimeout(() => btn.classList.remove('rotate-click'), 400);
-            [f.value, t.value] = [t.value, f.value];
-        };
+    // --- ADMIN LOGIC ---
+    window.checkAdminPassword = () => {
+        const input = document.getElementById('adminPasswordInput');
+        const errorMsg = document.getElementById('loginError');
+        
+        // Simple client-side check as requested "click pass word"
+        if(input.value === "admin123") {
+            // Hide Modal
+            const modalEl = document.getElementById('adminLoginModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+            
+            // Clear input
+            input.value = "";
+            errorMsg.classList.add('d-none');
+            
+            // Populate Admin Dashboard
+            populateAdminDashboard();
+            
+            // Navigate
+            navigateTo('page-admin');
+        } else {
+            errorMsg.classList.remove('d-none');
+            input.value = "";
+        }
+    };
 
-        // NEW: Fill Search from Recent with logic to trigger results
-        window.fillSearch = (from, to) => {
-             document.getElementById('input-from').value = from;
-             document.getElementById('input-to').value = to;
-             window.showBusResults(); // Automatically trigger search
-        };
+    function populateAdminDashboard() {
+        document.getElementById('admin-bus-count').innerText = allRoutesData.length;
+        document.getElementById('admin-route-count').innerText = allRoutesData.length; // Assuming 1 route per bus doc
+        
+        const tbody = document.getElementById('admin-bus-list');
+        let html = "";
+        allRoutesData.forEach(bus => {
+            html += `
+            <tr>
+                <td><strong>${bus.busNumber}</strong></td>
+                <td>${bus.busName}</td>
+                <td><span class="badge bg-secondary">${bus.category}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="alert('Edit ${bus.busNumber}')"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="alert('Delete ${bus.busNumber}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
 
-        window.showBusResults = () => {
-            const list = document.getElementById('results-list'); list.innerHTML = '';
-            // Demo data population
-            busRoutesDB[0].buses.forEach(bus => {
-                const div = document.createElement('div');
-                div.className = "bg-white p-5 rounded-2xl shadow-md border cursor-pointer hover:border-teal-500 transition-all";
-                div.innerHTML = `
-                    <div class="flex justify-between mb-2">
-                        <h3 class="font-bold text-xl text-teal-600">${bus.id}</h3>
-                        <span class="text-xs bg-green-100 text-green-600 px-2 py-1 rounded font-bold">LIVE</span>
-                    </div>
-                    <div class="flex justify-between text-sm text-gray-500">
-                        <span>07:00 AM <br> Start</span>
-                        <span>09:30 AM <br> End</span>
-                    </div>
-                `;
-                div.onclick = () => window.navigateTo('live-map');
-                list.appendChild(div);
+    // --- 3. DATA LOADING (UNCHANGED LOGIC) ---
+    async function loadStops() {
+        try {
+            const snapshot = await getDocs(collection(db, "routes"));
+            const stopsSet = new Set();
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                allRoutesData.push(data);
+                
+                if (data.route && Array.isArray(data.route)) {
+                    data.route.forEach(stop => {
+                        if (stop.name) stopsSet.add(stop.name.trim());
+                    });
+                }
             });
-            document.getElementById('result-count').innerText = "1 Found";
-            window.navigateTo('results');
-        };
 
-        window.shareTrip = () => {
-            if (navigator.share) {
-                navigator.share({ title: 'Triotrack', url: window.location.href }).catch(console.error);
-            } else {
-                alert("Link copied!");
+            const dataList = document.getElementById('stopOptions');
+            stopsSet.forEach(stopName => {
+                const option = document.createElement('option');
+                option.value = stopName;
+                dataList.appendChild(option);
+            });
+            console.log("Stops loaded:", stopsSet.size);
+        } catch (error) {
+            console.error("Error loading stops:", error);
+        }
+    }
+    loadStops();
+
+    // --- 4. SEARCH LOGIC (ADAPTED FOR FLOW) ---
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        const src = document.getElementById('source').value.toLowerCase().trim();
+        const dst = document.getElementById('destination').value.toLowerCase().trim();
+        const categoryFilter = document.getElementById('categoryFilter').value;
+        const resDiv = document.getElementById('results');
+        
+        if (!src || !dst) return alert("Please enter both Source and Destination");
+        
+        resDiv.innerHTML = "<div class='text-center mt-3'><div class='spinner-border text-primary'></div><p>Searching...</p></div>";
+
+        let html = "";
+        let count = 0;
+        let resultsArray = [];
+
+        allRoutesData.forEach(d => {
+            // Filter Check
+            if (categoryFilter !== "All" && d.category !== categoryFilter) return;
+
+            // Route Match Check
+            const keywords = d.searchKeywords || [];
+            const sIdx = keywords.indexOf(src);
+            const dIdx = keywords.indexOf(dst);
+
+            if (sIdx !== -1 && dIdx !== -1 && sIdx < dIdx) {
+                count++;
+                
+                const t1Obj = d.route.find(r => r.name.toLowerCase() === src);
+                const t2Obj = d.route.find(r => r.name.toLowerCase() === dst);
+                const t1 = t1Obj ? t1Obj.time : "N/A";
+                const t2 = t2Obj ? t2Obj.time : "N/A";
+
+                resultsArray.push({ busData: d, t1, t2, srcName: t1Obj.name, dstName: t2Obj.name });
+
+                html += `
+                    <div class="card mb-3 bus-result-card shadow-sm" onclick="window.handleBusClick(${resultsArray.length - 1})">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="fw-bold mb-0">${d.busName}</h5>
+                                    <small class="text-muted">${d.busNumber}</small>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <small class="text-muted">Departs</small><br>
+                                    <strong>${t1}</strong>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <small class="text-muted">Arrives</small><br>
+                                    <strong>${t2}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
             }
-        };
-    </script>
-    
-    <!-- Datalist for Search Autocomplete -->
-    <datalist id="locations">
-        <option value="Palakkad">
-        <option value="Guruvayur">
-        <option value="Ottapalam">
-        <option value="Thrissur">
-        <option value="Perinthalmanna">
-        <option value="Shoranur">
-        <option value="Cherpulassery">
-        <option value="Pattambi">
-        <option value="Kunnamkulam">
-        <option value="Chalissery">
-        <option value="Thiruvilwamala">
-        <option value="Pazhayannur">
-        <option value="Chelakkara">
-        <option value="Ernakulam">
-        <option value="Kochi">
-        <option value="Thiruvananthapuram">
-        <option value="Kozhikode">
-        <option value="Bangalore">
-        <option value="Chennai">
-    </datalist>
+        });
 
+        resDiv.innerHTML = count > 0 ? html : "<div class='alert alert-warning text-center'>No buses found for this route.</div>";
+        
+        window.handleBusClick = (index) => {
+            const result = resultsArray[index];
+            loadBusDetailsPage(result.busData);
+        };
+    });
+
+    // --- 5. DETAILS PAGE LOGIC ---
+    function loadBusDetailsPage(busData) {
+        currentBusForDetails = busData;
+        
+        document.getElementById('detail-bus-name').innerText = busData.busName;
+        document.getElementById('detail-bus-number').innerText = busData.busNumber;
+        
+        const route = busData.route || [];
+        const start = route.length > 0 ? route[0].name : "N/A";
+        const end = route.length > 0 ? route[route.length-1].name : "N/A";
+        
+        document.getElementById('detail-start').innerText = start;
+        document.getElementById('detail-end').innerText = end;
+        document.getElementById('detail-stops-count').innerText = route.length;
+
+        const timelineDiv = document.getElementById('detail-route-list');
+        let timelineHtml = "";
+        route.forEach(stop => {
+            timelineHtml += `
+                <div class="timeline-item">
+                    <strong>${stop.name}</strong>
+                    <span class="float-end text-primary">${stop.time}</span>
+                </div>`;
+        });
+        timelineDiv.innerHTML = timelineHtml;
+
+        document.getElementById('map-container').style.display = 'none';
+        if(unsubscribe) unsubscribe();
+
+        const trackBtn = document.getElementById('btn-live-track');
+        const newTrackBtn = trackBtn.cloneNode(true);
+        trackBtn.parentNode.replaceChild(newTrackBtn, trackBtn);
+        newTrackBtn.addEventListener('click', () => track(busData.busNumber));
+
+        navigateTo('page-details');
+    }
+
+    // Share Logic
+    window.shareBusDetails = async () => {
+        if(!currentBusForDetails) return;
+        const text = `Track bus ${currentBusForDetails.busName} (${currentBusForDetails.busNumber}) on TrioTrack!`;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'TrioTrack Bus Details',
+                    text: text,
+                    url: window.location.href
+                });
+            } catch (err) {
+                console.log('Share canceled');
+            }
+        } else {
+            alert("Copied to clipboard: " + text);
+        }
+    };
+
+    // --- 6. TRACKING LOGIC (UNCHANGED LOGIC) ---
+    function track(busNum) {
+        const mapDiv = document.getElementById('map-container');
+        mapDiv.style.display = 'block';
+        document.getElementById('map-title').innerText = `Tracking: ${busNum}`;
+        
+        setTimeout(() => mapDiv.scrollIntoView({ behavior: 'smooth' }), 100);
+
+        if (!map) {
+            map = L.map('map').setView([10.0, 76.0], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        }
+        
+        setTimeout(() => map.invalidateSize(), 300);
+
+        if (unsubscribe) unsubscribe();
+        if (marker) map.removeLayer(marker);
+
+        unsubscribe = onSnapshot(doc(db, "locations", busNum), (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const { lat, lng } = docSnapshot.data();
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                } else {
+                    marker = L.marker([lat, lng]).addTo(map).bindPopup(`<b>${busNum}</b>`).openPopup();
+                }
+                map.setView([lat, lng], 15);
+            } else { 
+                alert("GPS Signal Lost: This bus is offline.");
+            }
+        });
+    }
+
+    document.getElementById('closeMapBtn').addEventListener('click', () => {
+        document.getElementById('map-container').style.display = 'none';
+        if (unsubscribe) unsubscribe();
+    });
+
+</script>
 </body>
 </html>
