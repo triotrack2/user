@@ -2,118 +2,268 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard - Secure</title>
+    <title>Admin Dashboard - TrioTrack</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        /* Full Screen Overlay for Login */
-        #login-overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: #212529; z-index: 9999; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        /* GLOBAL FONT SETTING */
+        body, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, select {
+            font-family: "Times New Roman", Times, serif !important;
         }
-        .nav-link { cursor: pointer; }
+
+        /* PAGE TRANSITIONS */
+        .page-section {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+            padding-bottom: 80px;
+        }
+        .page-section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* DARK MODE STYLES */
+        body.dark-mode {
+            background-color: #121212 !important;
+            color: #ffffff !important;
+        }
+        .dark-mode .card {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border-color: #333;
+        }
+        .dark-mode .form-control, .dark-mode .form-select {
+            background-color: #2d2d2d;
+            color: #fff;
+            border-color: #444;
+        }
+        .dark-mode .text-muted {
+            color: #aaa !important;
+        }
+        .dark-mode .input-group-text {
+            background-color: #333;
+            color: #fff;
+            border-color: #444;
+        }
+        .dark-mode .nav-tabs .nav-link {
+            color: #aaa;
+        }
+        .dark-mode .nav-tabs .nav-link.active {
+            background-color: #1e1e1e;
+            color: #fff;
+            border-color: #333 #333 #1e1e1e;
+        }
+        .dark-mode .navbar {
+            background-color: #000 !important;
+        }
+
+        /* ANIMATED TITLE */
+        .brand-animate {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #dc3545, #fd7e14, #ffc107);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        /* UTILS */
+        .nav-link { cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body class="bg-light">
 
-<div id="login-overlay">
-    <div class="card p-4 text-center shadow" style="width: 320px;">
-        <h4 class="mb-3">Admin Login</h4>
+<!-- NAVBAR (Fixed Top) -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-danger shadow fixed-top">
+    <div class="container-fluid">
+        <!-- Date & Time (Left) -->
+        <div class="text-white d-none d-md-block">
+            <small id="date-display"></small> | <small id="time-display"></small>
+        </div>
         
-        <div id="system-status" class="alert alert-info p-1 small mb-3">
-            Connecting...
+        <span class="navbar-brand fw-bold ms-md-3 mx-auto">🚍 TrioTrack <span class="badge bg-dark small">ADMIN</span></span>
+
+        <!-- Right Side Controls -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- Theme Toggle -->
+            <div class="dropdown">
+                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-adjust"></i> Theme
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#" onclick="setTheme('light')">Light Mode</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="setTheme('dark')">Dark Mode</a></li>
+                </ul>
+            </div>
+            <!-- Logout Button (Hidden initially) -->
+            <button id="logoutBtn" class="btn btn-dark btn-sm fw-bold d-none">Logout</button>
+        </div>
+    </div>
+</nav>
+
+<div style="margin-top: 80px;"></div> <!-- Spacer -->
+
+<div class="container">
+
+    <!-- PAGE 1: ADMIN LOGIN -->
+    <div id="page-login" class="page-section active">
+        <div class="text-center mt-5">
+            <h1 class="brand-animate mb-0">TRIOTRACK</h1>
+            <p class="text-muted fw-bold letter-spacing-2" style="letter-spacing: 3px;">ADMINISTRATION</p>
         </div>
 
-        <input type="password" id="adminPass" class="form-control mb-3" placeholder="Enter Password">
-        <button id="loginBtn" class="btn btn-primary w-100" disabled>Login</button>
-        <p class="text-danger mt-2 small" id="loginMsg"></p>
-    </div>
-</div>
-
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <h2>Admin Dashboard</h2>
-        <button id="logoutBtn" class="btn btn-outline-danger btn-sm">Logout</button>
-    </div>
-    <hr>
-    
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item">
-            <a class="nav-link active" id="tab-route">Add Bus Route</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="tab-driver">Create Driver Account</a>
-        </li>
-    </ul>
-
-    <div id="route-section">
-        <div class="card p-4 shadow-sm">
-            <h5>Add New Bus Route</h5>
-            <form id="routeForm">
-                <div class="row mb-3">
-                    <div class="col"><input type="text" id="busName" class="form-control" placeholder="Bus Name" required></div>
-                    <div class="col"><input type="text" id="busNumber" class="form-control" placeholder="Bus Number" required></div>
+        <div class="card mx-auto shadow-lg mt-4" style="max-width: 400px; border-top: 5px solid #dc3545;">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-shield fa-3x text-danger mb-2"></i>
+                    <h3 class="fw-bold">Secure Login</h3>
+                    <div id="system-status" class="badge bg-secondary">Connecting...</div>
                 </div>
+
                 <div class="mb-3">
-                    <select id="category" class="form-select">
-                        <option>Private Bus</option>
-                        <option>Transport Bus</option>
-                        <option>Interstate Bus</option>
-                        <option>Institution BUs</option>
-                    </select>
+                    <label class="form-label text-muted small fw-bold">MASTER PASSWORD</label>
+                    <input type="password" id="adminPass" class="form-control form-control-lg" placeholder="••••••••">
                 </div>
+
+                <button id="loginBtn" class="btn btn-danger w-100 fw-bold py-2 shadow-sm" disabled>
+                    ACCESS DASHBOARD <i class="fas fa-lock-open ms-2"></i>
+                </button>
                 
-                <h6>Stops</h6>
-                <div id="stops-container">
-                    <div class="input-group mb-2">
-                        <span class="input-group-text">Start</span>
-                        <input type="text" id="startPoint" class="form-control" placeholder="Start Location" required>
-                        <input type="time" id="startTime" class="form-control" required>
-                    </div>
-                    <div class="input-group mb-2">
-                        <span class="input-group-text">Via</span>
-                        <input type="text" class="form-control stop-loc" placeholder="Intermediate Stop">
-                        <input type="time" class="form-control stop-time">
-                    </div>
-                    <div class="input-group mb-2">
-                        <span class="input-group-text">Via</span>
-                        <input type="text" class="form-control stop-loc" placeholder="Intermediate Stop">
-                        <input type="time" class="form-control stop-time">
-                    </div>
-                    <div class="input-group mb-2">
-                        <span class="input-group-text">End</span>
-                        <input type="text" id="endPoint" class="form-control" placeholder="Destination" required>
-                        <input type="time" id="endTime" class="form-control" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-dark w-100 mt-2">Save Route</button>
-            </form>
+                <p class="text-danger mt-3 text-center small fw-bold" id="loginMsg"></p>
+            </div>
         </div>
     </div>
 
-    <div id="driver-section" class="d-none">
-        <div class="card p-4 border-warning shadow-sm">
-            <h5>Create Driver Login</h5>
-            <form id="driverForm">
-                <div class="mb-3">
-                    <label>Bus Number (Username)</label>
-                    <input type="text" id="driverBusID" class="form-control" placeholder="e.g. KL-01" required>
-                </div>
-                <div class="mb-3">
-                    <label>Set Password</label>
-                    <input type="text" id="driverPass" class="form-control" placeholder="e.g. 1234" required>
-                </div>
-                <button type="submit" class="btn btn-warning w-100">Create Account</button>
-            </form>
+    <!-- PAGE 2: DASHBOARD -->
+    <div id="page-dashboard" class="page-section">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold"><i class="fas fa-tachometer-alt text-danger me-2"></i>Dashboard</h2>
+            <span class="badge bg-success">System Online</span>
         </div>
+
+        <!-- TABS -->
+        <ul class="nav nav-tabs nav-justified mb-4" id="adminTabs">
+            <li class="nav-item">
+                <a class="nav-link active text-danger" id="tab-route"><i class="fas fa-route me-2"></i>Add Bus Route</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-secondary" id="tab-driver"><i class="fas fa-id-card me-2"></i>Create Driver</a>
+            </li>
+        </ul>
+
+        <!-- ROUTE SECTION -->
+        <div id="route-section">
+            <div class="card p-4 shadow-sm border-0 border-start border-5 border-danger">
+                <h5 class="fw-bold mb-3">Add New Bus Route</h5>
+                <form id="routeForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="small text-muted">Bus Name</label>
+                            <input type="text" id="busName" class="form-control" placeholder="e.g. Blue Bird Exp" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="small text-muted">Bus Number</label>
+                            <input type="text" id="busNumber" class="form-control" placeholder="e.g. KL-01-AB-1234" required style="text-transform: uppercase;">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small text-muted">Service Category</label>
+                        <select id="category" class="form-select">
+                            <option value="Private Bus">Private Bus</option>
+                            <option value="Public Bus (KSRTC)">Public Bus (KSRTC)</option> <!-- Aligned with User App values -->
+                            <option value="Interstate">Interstate Bus</option>
+                            <option value="Institution">Institution Bus</option>
+                        </select>
+                    </div>
+                    
+                    <h6 class="border-bottom pb-2 mb-3 mt-4 text-primary">Route Stops & Timing</h6>
+                    <div id="stops-container">
+                        <!-- Start -->
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-success text-white fw-bold" style="width: 60px;">Start</span>
+                            <input type="text" id="startPoint" class="form-control" placeholder="Start Location" required>
+                            <input type="time" id="startTime" class="form-control" style="max-width: 130px;" required>
+                        </div>
+                        <!-- Via 1 -->
+                        <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold" style="width: 60px;">Via</span>
+                            <input type="text" class="form-control stop-loc" placeholder="Intermediate Stop">
+                            <input type="time" class="form-control stop-time" style="max-width: 130px;">
+                        </div>
+                        <!-- Via 2 -->
+                        <div class="input-group mb-2">
+                            <span class="input-group-text fw-bold" style="width: 60px;">Via</span>
+                            <input type="text" class="form-control stop-loc" placeholder="Intermediate Stop">
+                            <input type="time" class="form-control stop-time" style="max-width: 130px;">
+                        </div>
+                        <!-- End -->
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-danger text-white fw-bold" style="width: 60px;">End</span>
+                            <input type="text" id="endPoint" class="form-control" placeholder="Destination" required>
+                            <input type="time" id="endTime" class="form-control" style="max-width: 130px;" required>
+                        </div>
+                    </div>
+                    
+                    <div class="text-end mt-2">
+                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="alert('Please fill the Via fields. Dynamic add feature coming soon.')">+ Add More Stops</button>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 mt-4 fw-bold py-2">
+                        <i class="fas fa-save me-2"></i> SAVE ROUTE
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- DRIVER SECTION -->
+        <div id="driver-section" class="d-none">
+            <div class="card p-4 shadow-sm border-0 border-start border-5 border-warning">
+                <h5 class="fw-bold mb-3">Create Driver Credentials</h5>
+                <p class="text-muted small">Drivers use these credentials to log in to the Driver App.</p>
+                <form id="driverForm">
+                    <div class="mb-3">
+                        <label class="fw-bold">Bus Number (Username)</label>
+                        <input type="text" id="driverBusID" class="form-control form-control-lg" placeholder="e.g. KL-01-AB-1234" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold">Set Password</label>
+                        <input type="text" id="driverPass" class="form-control form-control-lg" placeholder="e.g. pass123" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 mt-3 fw-bold py-2">
+                        <i class="fas fa-user-plus me-2"></i> CREATE ACCOUNT
+                    </button>
+                </form>
+            </div>
+        </div>
+
     </div>
+
 </div>
+
+<footer class="text-center mt-5 mb-4 text-muted small">
+    <hr>
+    <p>© 2024 TrioTrack Admin Portal</p>
+</footer>
+
+<!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // --- 1. FIREBASE CONFIG ---
     const firebaseConfig = {
       apiKey: "AIzaSyDcWwo0m2eS1ndyC06U1G_JF1J7Y1WNlfQ",
       authDomain: "triotrack-66dd6.firebaseapp.com",
@@ -127,21 +277,46 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Enable Login Button when ready
-    document.getElementById('system-status').innerText = "System Ready";
-    document.getElementById('system-status').classList.replace('alert-info', 'alert-success');
-    document.getElementById('loginBtn').disabled = false;
+    // --- 2. UI UTILITIES ---
 
-    // --- 1. ADMIN LOGIN CHECK ---
-    document.getElementById('loginBtn').addEventListener('click', async () => {
+    // Time & Date
+    function updateTime() {
+        const now = new Date();
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const dateString = now.toLocaleDateString(undefined, dateOptions);
+        document.getElementById('date-display').innerText = dateString;
+        document.getElementById('time-display').innerText = timeString;
+    }
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // Theme Toggle
+    window.setTheme = (mode) => {
+        if (mode === 'dark') {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+    };
+
+    // --- 3. LOGIN LOGIC (PRESERVED) ---
+    const statusEl = document.getElementById('system-status');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    // Enable Login Button when ready
+    statusEl.innerText = "System Ready";
+    statusEl.classList.replace('bg-secondary', 'bg-success');
+    loginBtn.disabled = false;
+
+    loginBtn.addEventListener('click', async () => {
         const inputPass = document.getElementById('adminPass').value.trim();
         const msg = document.getElementById('loginMsg');
-        const btn = document.getElementById('loginBtn');
-
+        
         if (!inputPass) return;
 
-        btn.innerText = "Verifying...";
-        btn.disabled = true;
+        loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Verifying...';
+        loginBtn.disabled = true;
 
         try {
             // Fetch Master Password from Firestore
@@ -150,88 +325,140 @@
 
             if (docSnap.exists()) {
                 if (inputPass === docSnap.data().password) {
-                    document.getElementById('login-overlay').style.display = 'none';
+                    // Success: Switch Views
+                    document.getElementById('page-login').classList.remove('active');
+                    document.getElementById('page-dashboard').classList.add('active');
+                    document.getElementById('logoutBtn').classList.remove('d-none');
                 } else {
                     msg.innerText = "❌ Incorrect Password";
-                    btn.innerText = "Login";
-                    btn.disabled = false;
+                    resetLoginBtn();
                 }
             } else {
-                alert("Error: 'admin_master' document not found in Database.\nPlease create it in Firebase Console first.");
+                alert("Error: 'admin_master' document not found in Database.\nPlease create it in Firebase Console first with field 'password'.");
                 msg.innerText = "Config Error: admin_master missing";
-                btn.innerText = "Login";
-                btn.disabled = false;
+                resetLoginBtn();
             }
         } catch (error) {
             console.error(error);
             msg.innerText = "Connection Error";
-            btn.innerText = "Login";
-            btn.disabled = false;
+            resetLoginBtn();
         }
     });
 
+    function resetLoginBtn() {
+        loginBtn.innerHTML = 'ACCESS DASHBOARD <i class="fas fa-lock-open ms-2"></i>';
+        loginBtn.disabled = false;
+    }
+
+    // Logout
     document.getElementById('logoutBtn').addEventListener('click', () => {
         location.reload();
     });
 
-    // --- 2. TABS ---
-    document.getElementById('tab-route').addEventListener('click', () => {
+    // --- 4. TAB LOGIC ---
+    document.getElementById('tab-route').addEventListener('click', function() {
         document.getElementById('route-section').classList.remove('d-none');
         document.getElementById('driver-section').classList.add('d-none');
-        document.getElementById('tab-route').classList.add('active');
-        document.getElementById('tab-driver').classList.remove('active');
+        
+        this.classList.add('active', 'text-danger');
+        this.classList.remove('text-secondary');
+        
+        const driverTab = document.getElementById('tab-driver');
+        driverTab.classList.remove('active', 'text-danger');
+        driverTab.classList.add('text-secondary');
     });
 
-    document.getElementById('tab-driver').addEventListener('click', () => {
+    document.getElementById('tab-driver').addEventListener('click', function() {
         document.getElementById('route-section').classList.add('d-none');
         document.getElementById('driver-section').classList.remove('d-none');
-        document.getElementById('tab-route').classList.remove('active');
-        document.getElementById('tab-driver').classList.add('active');
+        
+        this.classList.add('active', 'text-danger');
+        this.classList.remove('text-secondary');
+        
+        const routeTab = document.getElementById('tab-route');
+        routeTab.classList.remove('active', 'text-danger');
+        routeTab.classList.add('text-secondary');
     });
 
-    // --- 3. CREATE DRIVER ---
+    // --- 5. CREATE DRIVER (PRESERVED) ---
     document.getElementById('driverForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const busID = document.getElementById('driverBusID').value.toUpperCase().trim();
         const pass = document.getElementById('driverPass').value.trim();
         
+        if(!busID || !pass) return alert("Please fill all fields");
+
+        const submitBtn = e.target.querySelector('button');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = "Creating...";
+        submitBtn.disabled = true;
+
         try {
             await setDoc(doc(db, "credentials", busID), { password: pass });
-            alert("Driver Account Created!");
+            alert("✅ Driver Account Created Successfully!");
             e.target.reset();
-        } catch (error) { alert("Error: " + error.message); }
+        } catch (error) { 
+            alert("Error: " + error.message); 
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
     });
 
-    // --- 4. SAVE ROUTE ---
+    // --- 6. SAVE ROUTE (PRESERVED) ---
     document.getElementById('routeForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = "Saving...";
+        submitBtn.disabled = true;
+
         let stops = [];
         
-        stops.push({ name: document.getElementById('startPoint').value, time: document.getElementById('startTime').value });
+        // Add Start
+        stops.push({ 
+            name: document.getElementById('startPoint').value, 
+            time: document.getElementById('startTime').value 
+        });
         
+        // Add Vias
         document.querySelectorAll('#stops-container .input-group').forEach(div => {
             if(div.querySelector('.stop-loc')) {
                 const loc = div.querySelector('.stop-loc').value;
                 const time = div.querySelector('.stop-time').value;
-                if(loc && loc.trim() !== "") stops.push({ name: loc, time: time || "N/A" });
+                if(loc && loc.trim() !== "") {
+                    stops.push({ name: loc, time: time || "N/A" });
+                }
             }
         });
         
-        stops.push({ name: document.getElementById('endPoint').value, time: document.getElementById('endTime').value });
+        // Add End
+        stops.push({ 
+            name: document.getElementById('endPoint').value, 
+            time: document.getElementById('endTime').value 
+        });
 
+        // Construct Data Object (Matching User App Search Logic)
         const busData = {
             busName: document.getElementById('busName').value,
             busNumber: document.getElementById('busNumber').value.toUpperCase(),
             category: document.getElementById('category').value,
             route: stops,
+            // Create keywords for search capability in User App
             searchKeywords: stops.map(s => s.name.toLowerCase().trim())
         };
 
         try {
             await addDoc(collection(db, "routes"), busData);
-            alert("Route Saved Successfully!");
+            alert("✅ Route Saved Successfully!");
             e.target.reset();
-        } catch (err) { alert("Error saving route: " + err.message); }
+        } catch (err) { 
+            alert("Error saving route: " + err.message); 
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
     });
 </script>
 </body>
