@@ -8,11 +8,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Poppins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         /* GLOBAL FONT SETTING */
         body, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, select {
-            font-family: "Times New Roman", Times, serif !important;
+            font-family: 'Poppins', sans-serif !important;
         }
 
         /* PAGE TRANSITIONS */
@@ -187,13 +191,18 @@
                             <input type="text" id="busNumber" class="form-control" placeholder="e.g. KL-01-AB-1234" required style="text-transform: uppercase;">
                         </div>
                     </div>
+                    
                     <div class="mb-3">
                         <label class="small text-muted">Service Category</label>
                         <select id="category" class="form-select">
+                            <!-- Section 1 -->
                             <option value="Private Bus">Private Bus</option>
-                            <option value="Public Bus (KSRTC)">Public Bus (KSRTC)</option> 
-                            <option value="Interstate">Interstate Bus</option>
-                            <option value="Institution">Institution Bus</option>
+                            <!-- Section 2: Renamed from Public Bus to Transport -->
+                            <option value="Public Bus (KSRTC)">Transport (KSRTC)</option> 
+                            <!-- Section 3: Added -->
+                            <option value="Interstate">Interstate</option>
+                            <!-- Section 4: Added -->
+                            <option value="Institution">Institution</option>
                         </select>
                     </div>
                     
@@ -393,7 +402,7 @@
         location.reload();
     });
 
-    // --- 4. TAB LOGIC (UPDATED FOR 3 TABS) ---
+    // --- 4. TAB LOGIC ---
     function switchTab(tabId, sectionId) {
         // Hide all
         ['route-section', 'fleet-section', 'driver-section'].forEach(id => document.getElementById(id).classList.add('d-none'));
@@ -415,7 +424,7 @@
     document.getElementById('tab-fleet').addEventListener('click', () => switchTab('tab-fleet', 'fleet-section'));
     document.getElementById('tab-driver').addEventListener('click', () => switchTab('tab-driver', 'driver-section'));
 
-    // --- 5. FLEET VIEW LOGIC (NEW) ---
+    // --- 5. FLEET VIEW LOGIC ---
     // Listen for realtime updates to show bus details
     onSnapshot(collection(db, "routes"), (snapshot) => {
         const tbody = document.getElementById('fleet-list-body');
@@ -483,7 +492,7 @@
         }
     });
 
-    // --- 7. SAVE ROUTE (PRESERVED) ---
+    // --- 7. SAVE ROUTE (PRESERVED & UPDATED) ---
     document.getElementById('routeForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
